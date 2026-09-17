@@ -8,6 +8,8 @@
 
 ## Teaching Approach
 
+- Write for programmers who already understand basic programming, HTTP, JSON, and common development workflows. Keep elementary explanations brief and spend the space on mechanisms, protocol details, failure cases, and engineering tradeoffs.
+- Include interview-relevant technical questions and follow-up reasoning, grounded in the chapter's implementation. Interview preparation is one goal, not the limit of the curriculum; do not claim question frequency without evidence.
 - Follow a problem-driven progression: scenario -> problem -> minimal solution -> implementation -> new problem.
 - Start each chapter with a concrete limitation of the Agent built so far. Introduce only the mechanisms needed to address the current scenario.
 - Maintain one small teaching Agent that evolves across chapters, starting with a single LLM call. Keep its code and execution flow coherent as capabilities are added.
@@ -39,6 +41,8 @@
 ## Writing Requirements
 
 - Write this `AGENTS.md` file in English.
+- Write the initial Markdown/MDX curriculum in Chinese. Add multilingual editions after the Chinese curriculum is complete; do not scaffold translations prematurely.
+- Chapter 1 covers a single LLM interaction across OpenAI Chat Completions, OpenAI Responses, and Anthropic Messages, including streaming transport, event aggregation, and completion/error semantics. Later chapters deepen tool-specific protocol behavior.
 - Ground technical explanations in actual source code. Verify the implementation before drawing conclusions.
 - Identify the upstream project and the version or commit being analyzed, and provide source code references.
 - Clearly distinguish simplified teaching examples from the upstream project's actual implementation.

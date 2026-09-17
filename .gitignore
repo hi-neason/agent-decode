@@ -22,3 +22,8 @@ pnpm-debug.log*
 
 # macOS metadata
 .DS_Store
+
+# Python teaching examples
+__pycache__/
+*.py[cod]
+.venv/

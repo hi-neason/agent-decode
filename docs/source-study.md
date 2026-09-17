@@ -1,6 +1,6 @@
 # 教学参考与源码案例调研
 
-调研日期：2026-09-17。对应 [课程路线 v0.1](curriculum-roadmap.md)。
+调研日期：2026-09-17。本文记录初版课程的选材依据，当前安排见 [课程路线](curriculum-roadmap.md)。首章现已按读者要求纳入三类 API 与流式处理，[第一章](chapters/01-llm-apis-and-streaming.mdx)补充了官方 SDK 的固定版本证据。
 
 ## 调研范围与证据边界
 
