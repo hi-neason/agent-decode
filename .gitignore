@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Docusaurus build output and generated files
+/build/
+/.docusaurus/
+/.cache-loader/
+
+# Local environment configuration
+.env
+.env.*
+!.env.example
+
+# Package manager debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local agent runtime state
+.omx/
+
+# macOS metadata
+.DS_Store

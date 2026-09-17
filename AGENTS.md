@@ -21,3 +21,11 @@
 - Ground technical explanations in actual source code. Verify the implementation before drawing conclusions.
 - Identify the upstream project and the version or commit being analyzed, and provide source code references.
 - Clearly distinguish simplified teaching examples from the upstream project's actual implementation.
+
+## Verification and Delivery
+
+- After completing changes, run the tests and checks appropriate to the scope of the change.
+- Once verification passes, automatically commit and push the task's changes without requesting confirmation again, unless the user explicitly asks otherwise.
+- Include only files relevant to the task in each commit and preserve unrelated worktree changes.
+- If verification or pushing fails, resolve the issue where possible and report any remaining blocker without claiming successful delivery.
+- Verify that the remote branch contains the resulting commit and report the validation results and commit identifier.
