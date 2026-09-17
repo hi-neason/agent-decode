@@ -6,6 +6,27 @@
 - Analyze well-known open-source Agent frameworks to help readers understand both the underlying concepts and their practical implementation.
 - Introduce the problem and core concepts first, then use source code to explain execution flows, key mechanisms, and design tradeoffs.
 
+## Teaching Approach
+
+- Follow a problem-driven progression: scenario -> problem -> minimal solution -> implementation -> new problem.
+- Start each chapter with a concrete limitation of the Agent built so far. Introduce only the mechanisms needed to address the current scenario.
+- Maintain one small teaching Agent that evolves across chapters, starting with a single LLM call. Keep its code and execution flow coherent as capabilities are added.
+- End each chapter by stating the capability gained, the remaining limitations, and the next chapter or optional branches that address them.
+- Prefer chapter titles that express the reader's problem, with the technical concept as a subtitle or qualifier.
+- Organize knowledge as a dependency graph while offering beginners a recommended reading sequence. Distinguish required prerequisites from optional related topics; do not force every topic into one linear chain.
+- Introduce a topic at the depth needed for the current task and revisit it later for deeper mechanisms and engineering tradeoffs. Cross-link shared explanations instead of duplicating them.
+- Treat the learning sequence as a teaching choice, not a universal architecture or mandatory evolution path for all Agents.
+
+## Source Code Case Studies
+
+- Structure topics around the problem, a minimal teaching implementation, verified source code cases, design comparisons, and unresolved questions.
+- Explain the problem and minimal mechanism before claiming a general solution; do not present one framework's design as an industry-wide rule.
+- Keep the curriculum independent of any single upstream project. Start with one primary case-study project for depth, then introduce other projects where their approaches differ meaningfully.
+- Choose a clear primary case for each topic and add contrasting cases only when they improve understanding. Do not require every chapter to cover every project.
+- Compare solutions to the same technical problem, including their assumptions, behavior, constraints, and tradeoffs, rather than merely listing implementation differences.
+- Provide project-level guides covering architecture, entry points, module boundaries, and an end-to-end task flow. Link these guides to the relevant topic analyses so readers can explore both by concept and by project.
+- Keep the recommended learning route, technical topics, and project guides as complementary navigation paths over shared content.
+
 ## Website and Content Stack
 
 - Use Docusaurus to build the educational documentation website.
