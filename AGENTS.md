@@ -1,22 +1,23 @@
-# 项目约定
+# Project Guidelines
 
-## 项目定位
+## Project Purpose
 
-- agent-decode 是以源码为依据的 Agent 原理学习与拆解笔记项目。
-- 通过解读知名开源 Agent 框架，帮助读者理解 Agent 技术原理及其工程实践。
-- 内容从问题和核心概念入手，结合源码说明运行流程、关键机制与设计取舍。
+- agent-decode is a collection of learning notes that explain Agent principles through source code analysis.
+- Analyze well-known open-source Agent frameworks to help readers understand both the underlying concepts and their practical implementation.
+- Introduce the problem and core concepts first, then use source code to explain execution flows, key mechanisms, and design tradeoffs.
 
-## 网站与内容技术选型
+## Website and Content Stack
 
-- 使用 Docusaurus 构建教学文档网站。
-- 以 Markdown/MDX 编写内容：普通章节使用 `.md`，需要嵌入 React 交互组件的章节使用 `.mdx`。
-- 文档负责原理讲解、代码片段、图片和参考资料；React 组件负责交互图解与动画演示。
-- 按需添加图解、GIF 和交互演示，不要求每篇文章加入动画。
-- 展示 Agent Loop、工具调用、上下文变化等执行过程时，优先提供可暂停、可单步推进的演示，方便读者对照源码。
-- 网站导航与发布由 Docusaurus 承载，保持日常内容编写和维护简单。
+- Use Docusaurus to build the educational documentation website.
+- Write content in Markdown/MDX: use `.md` for regular chapters and `.mdx` for chapters that embed React components.
+- Use documents for explanations, code snippets, images, and references; use React components for interactive diagrams and animated demonstrations.
+- Add diagrams, GIFs, and interactive demonstrations where useful. Animation is not required in every article.
+- For execution flows such as the Agent Loop, tool calls, and context changes, prefer demonstrations that support pausing and stepping through the process so readers can compare each step with the source code.
+- Use Docusaurus for website navigation and publishing, keeping routine content authoring and maintenance simple.
 
-## 内容编写要求
+## Writing Requirements
 
-- 技术讲解以实际源码为依据，先核对实现，再形成结论。
-- 标明分析对应的上游项目、版本或提交，并提供源码引用。
-- 清楚区分用于教学的简化示例与上游项目的实际实现。
+- Write this `AGENTS.md` file in English.
+- Ground technical explanations in actual source code. Verify the implementation before drawing conclusions.
+- Identify the upstream project and the version or commit being analyzed, and provide source code references.
+- Clearly distinguish simplified teaching examples from the upstream project's actual implementation.
