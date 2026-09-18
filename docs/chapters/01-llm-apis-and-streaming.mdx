@@ -393,7 +393,7 @@ Chat／Responses 读取 `OPENAI_API_KEY`，Messages 读取 `ANTHROPIC_API_KEY`�
 2. **SSE 帧解析**：只负责 UTF-8、行与事件边界，不理解模型语义。
 3. **协议聚合**：提取正文、更新用量、检查停止原因；失败或不完整以非零退出报告。
 
-示例按已支持的顺序文本事件追加显示，不提供通用的多输出索引重排；Responses 最终文本还会与增量结果核对。需要并行工具、多种 block 或完整事件重建时，应保留 item／block 身份，下一节的 Pi 源码展示了这种做法。
+示例按已支持的顺序文本事件追加显示，不提供通用的多输出索引重排；Responses 最终文本还会与增量结果核对。需要并行工具、多种 block 或完整事件重建时，应保留 item／block 身份，下一节沿 Codex 的内部事件与完成状态观察生产边界，并用 Pi 补充协议差异。
 
 网络层使用 `read1(4096)` 向 SSE 解析器提供可用字节，而不是先读完整响应再处理。这里的 4096 是读取上限，不是协议帧大小；60 秒 socket 超时也不是整个生成任务的总时限。
 
@@ -407,33 +407,65 @@ python3 -m unittest discover -s examples/ch01_llm -p 'test_*.py' -v
 
 关键测试对象不是“正常 JSON 能否取出 text”，而是跨字节分片的中文、CRLF、空 choices 用量块、文本 done 与响应 done 的区别，以及终态前断流。测试通过仍不覆盖官方服务连通性、真实模型选择或第三方兼容性。
 
-## 7. 真实项目怎样处理：Pi 的三个 Provider
+## 7. 真实项目怎样处理：沿 Codex 的 Responses 链路阅读
 
-以下依据 Pi 固定提交 `71dca871bc80b6bc97be37f0ca3189399d651fff`，是源码定点分析，未运行该项目的集成测试。完整项目快照信息见 [源码案例调研](../source-study.md)。
+源码学习以 **OpenAI Codex** 为主。以下依据固定提交 `5b1d6560181680f95cde95c14ed042acc02248ed`，只读核实请求与流处理代码，未运行 Codex 的集成测试。完整快照信息见 [源码案例调研](../source-study.md)。
 
-### 7.1 Chat：先收 usage，再决定有没有正文
+这里沿 Codex 的 **Responses HTTP/SSE 路径**观察生产实现。Codex 还存在 WebSocket 路径，不能将本节描述成它唯一的传输方式；本章讲解三类 API，也不意味着 Codex 实现了这三类 API。
 
-在 [`openai-completions.ts` 的流处理](https://github.com/earendil-works/pi/blob/71dca871bc80b6bc97be37f0ca3189399d651fff/packages/ai/src/api/openai-completions.ts#L558-L592)中，Pi 先处理 `chunk.usage`，再读取 `choices[0]`，最后追加 `choice.delta.content`。
+```text
+ModelClientSession 调用 ModelClient 构造 Responses 请求
+    → ResponsesClient 发出 HTTP 请求
+    → SSE 解码并解释 Responses 事件
+    → 内部文本／输出项／完成事件
+    → 上层消费事件，推进当前回合
+```
 
-这个顺序直接解决空 choices 用量块的问题。它还保存原始停止原因，再映射到自己的内部表示。注意这里消费的是 SDK 已解析的 chunk，不能拿这段代码声称 Pi 在这里自行解析了原始 `[DONE]`。
+### 7.1 请求构造：输入不只是一个 prompt 字符串
 
-Pi 对部分兼容 Provider 有明确的结束原因例外，见[流结束检查](https://github.com/earendil-works/pi/blob/71dca871bc80b6bc97be37f0ca3189399d651fff/packages/ai/src/api/openai-completions.ts#L675-L695)。本章示例选择严格要求官方形状；两者是在支持范围上作了不同取舍。
+[`core/src/client.rs` 的 `build_responses_request`](https://github.com/openai/codex/blob/5b1d6560181680f95cde95c14ed042acc02248ed/codex-rs/core/src/client.rs#L794-L899)先整理输入与工具定义，再构造 `ResponsesApiRequest`。在常规 Responses 路径中，可以对照本章的 `input`、`instructions`、`tools`、`stream` 和 `store` 等字段。
 
-### 7.2 Responses：结束快照用于校正，不用于重复追加
+这里已经能看出 Harness 的职责：它组织本次调用需要的上下文、工具与运行配置，再交给 API 客户端。模型不会自行从工作目录中收集这些输入。
 
-Pi 在 [`openai-responses-shared.ts`](https://github.com/earendil-works/pi/blob/71dca871bc80b6bc97be37f0ca3189399d651fff/packages/ai/src/api/openai-responses-shared.ts#L633-L709) 中处理文本／拒绝增量，并在输出项完成时根据内容快照更新文本。
+此函数还包含 `use_responses_lite` 等生产分支。首次阅读先沿常规分支走通，其他分支单独标注，不把条件不同的实现拼成一个虚构的请求格式。
 
-它在[响应级终态处理](https://github.com/earendil-works/pi/blob/71dca871bc80b6bc97be37f0ca3189399d651fff/packages/ai/src/api/openai-responses-shared.ts#L741-L784)中区分 completed、incomplete 和失败，没有把 `response.output_text.done` 当成整个请求完成。
+### 7.2 HTTP 传输与协议解析分开
 
-其中 token 限制导致的 incomplete 会映射为内部 `length`。这说明通用客户端的 `done` 事件仍需附带原因；上层 Agent 应决定是否继续、压缩上下文或报告限制，不能只看事件名称。
+[`codex-api/src/endpoint/responses.rs` 的 `stream_encoded`](https://github.com/openai/codex/blob/5b1d6560181680f95cde95c14ed042acc02248ed/codex-rs/codex-api/src/endpoint/responses.rs#L155-L190)发出 POST 请求，设置 `Accept: text/event-stream`，再通过 `spawn_response_stream` 把响应交给流处理逻辑，同时传入空闲超时配置。
 
-### 7.3 Messages：按 block index 保留类型和归属
+这一层负责建立流，并不根据几段文本判断任务是否完成。HTTP、SSE 分帧、Responses 事件语义分别有自己的边界；本章示例采用相同的职责划分，但没有复刻 Codex 的完整网络栈。
 
-Pi 在 [`anthropic-messages.ts`](https://github.com/earendil-works/pi/blob/71dca871bc80b6bc97be37f0ca3189399d651fff/packages/ai/src/api/anthropic-messages.ts#L621-L696) 中创建不同类型的 block，并根据事件索引定位增量所属的内容。
+### 7.3 将协议事件转换成内部事件
 
-它在[用量更新](https://github.com/earendil-works/pi/blob/71dca871bc80b6bc97be37f0ca3189399d651fff/packages/ai/src/api/anthropic-messages.ts#L740-L775)时更新出现的字段，在[流结束检查](https://github.com/earendil-works/pi/blob/71dca871bc80b6bc97be37f0ca3189399d651fff/packages/ai/src/api/anthropic-messages.ts#L461-L499)时检查消息结束，避免把仅收到部分内容的连接视为成功。
+[`codex-api/src/sse/responses.rs` 的 `process_responses_event`](https://github.com/openai/codex/blob/5b1d6560181680f95cde95c14ed042acc02248ed/codex-rs/codex-api/src/sse/responses.rs#L353-L510)区分几类事件：
 
-三个实现共同保留的，不是“最终一段字符串”，而是**类型化内容、事件归属、用量和停止原因**。本章先展示文本这一部分；后续要驱动工具执行，就必须扩展这份结果结构。
+| 上游事件 | Codex 在此处的处理 | 对上层的意义 |
+| --- | --- | --- |
+| `response.output_text.delta` | 转为 `OutputTextDelta` | 有正文可以展示，不代表整次响应完成 |
+| `response.output_item.done` | 转为 `OutputItemDone` | 一个结构化输出项完成，后续可以按类型处理 |
+| `response.completed` | 产生包含响应 ID、用量等信息的 `Completed` | 本次模型响应达到完成状态 |
+| `response.incomplete` | 产生包含不完整原因的错误 | 不能悄悄当作正常完成 |
+| `response.failed` | 转为错误 | 进入失败处理路径 |
+
+内部事件保留了文本、输出项和整次响应的区别。这比“统一返回一个字符串”更适合 Agent：下一章的工具调用会出现在结构化输出项里，不能被文本拼接逻辑吞掉。
+
+### 7.4 响应完成，不依赖连接恰好关闭
+
+同文件的 [SSE 消费循环](https://github.com/openai/codex/blob/5b1d6560181680f95cde95c14ed042acc02248ed/codex-rs/codex-api/src/sse/responses.rs#L568-L681)对等待事件设置空闲超时，处理传输错误，并把 `response.completed` 之前的 EOF 视为失败。收到内部 `Completed` 后即可返回，不必再等连接关闭。
+
+这里需要保留两个实现细节：部分协议错误先被记录，随后在流结束时报告；无法解析的事件 JSON 会记录日志并跳过。因此不能将它概括成“任何异常事件都会立即中止”。阅读生产源码，要看错误如何传播，而不只看分支里有没有创建错误对象。
+
+本章教学客户端选择更严格的未知事件处理，并在流消费结束时检查终态。两者的策略不完全相同，但都要求区分**传输结束与协议完成**。这条 HTTP/SSE 路径也不覆盖 Codex 的[WebSocket 与 HTTP 回退分支](https://github.com/openai/codex/blob/5b1d6560181680f95cde95c14ed042acc02248ed/codex-rs/core/src/client.rs#L1964-L2018)。
+
+### 7.5 补充对比：什么时候值得看 Pi？
+
+当问题涉及另外两类 API，或需要比较统一事件层的取舍时，再引入 Pi。以下对应其固定提交 `71dca871bc80b6bc97be37f0ca3189399d651fff`：
+
+- [Chat 的 usage 与 choices 处理](https://github.com/earendil-works/pi/blob/71dca871bc80b6bc97be37f0ca3189399d651fff/packages/ai/src/api/openai-completions.ts#L558-L592)：先收 usage，再判断是否有 choice，避免丢掉空 choices 用量块；这里消费的是 SDK chunk，不是自行解析原始 SSE。
+- [Responses 的终态归一化](https://github.com/earendil-works/pi/blob/71dca871bc80b6bc97be37f0ca3189399d651fff/packages/ai/src/api/openai-responses-shared.ts#L741-L784)：token 上限导致的 incomplete 可以映射为内部 `length`，与上述 Codex 分支的错误表示不同。对比时要继续看上层怎样处理，不能仅凭名称判断优劣。
+- [Messages 的内容块处理](https://github.com/earendil-works/pi/blob/71dca871bc80b6bc97be37f0ca3189399d651fff/packages/ai/src/api/anthropic-messages.ts#L621-L696)：按索引保留不同 block 的归属，展示多类型内容为什么不能一律拼成正文。
+
+主线仍然是同一个问题：宿主怎样把模型输出变成可观察、可判断、可继续执行的状态。Codex 给出主要工程案例，其他项目用来说明有实质差异的实现选择。
 
 ## 8. 面试追问：从实现推导答案
 

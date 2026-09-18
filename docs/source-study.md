@@ -1,6 +1,6 @@
 # 教学参考与源码案例调研
 
-调研日期：2026-09-17。本文记录初版课程的选材依据，当前安排见 [课程路线](curriculum-roadmap.md)。首章现已按读者要求纳入三类 API 与流式处理，[第一章](chapters/01-llm-apis-and-streaming.mdx)补充了官方 SDK 的固定版本证据。
+调研日期：2026-09-17。本文保留初版调研证据；2026-09-18 起根据项目决策以 Codex 为主，Pi 等作为补充。当前安排见 [课程路线](curriculum-roadmap.md)。首章现已按读者要求纳入三类 API 与流式处理，[第一章](chapters/01-llm-apis-and-streaming.mdx)补充了官方 SDK 的固定版本证据。
 
 ## 调研范围与证据边界
 
@@ -33,9 +33,23 @@
 
 我们保留“一个问题推动一次机制变化”的方式，先完成一次调用、工具请求、宿主执行与回传、循环四个独立学习目标，再扩展工程机制。
 
-## 首批主案例：Pi
+## 主要源码学习项目：Codex
 
-选择理由是源码边界适合教学定点阅读，而非整个项目足够简单。Provider 中仍有大量协议适配逻辑，C01 不应要求读者先理解整个文件。
+源码学习以 Codex 为主。此版本的核心循环在 `session/turn.rs`；先理解最小机制，再沿以下入口阅读真实工程边界。
+
+| 学习问题 | 文件与符号 | 已核实内容 |
+| --- | --- | --- |
+| API 请求有哪些显式字段？ | [`client.rs` · `build_responses_request`](https://github.com/openai/codex/blob/5b1d6560181680f95cde95c14ed042acc02248ed/codex-rs/core/src/client.rs#L881-L901) | 构造 Responses 请求，包含 `input`、`tools`、`tool_choice`、流式和并行调用等字段 |
+| 输出项目怎样成为工具调用？ | [`tools/router.rs` · `build_tool_call`](https://github.com/openai/codex/blob/5b1d6560181680f95cde95c14ed042acc02248ed/codex-rs/core/src/tools/router.rs#L242-L296) | 将不同 `ResponseItem` 转换为内部调用，保留调用 ID 与参数载荷；转换不等于执行 |
+| 工具执行怎样推动下一轮？ | [`stream_events_utils.rs` · 工具请求分支](https://github.com/openai/codex/blob/5b1d6560181680f95cde95c14ed042acc02248ed/codex-rs/core/src/stream_events_utils.rs#L332-L344) | 创建工具执行 future，同时设置 `needs_follow_up` |
+| 工具之外还有什么继续条件？ | [`session/turn.rs` · `run_turn`](https://github.com/openai/codex/blob/5b1d6560181680f95cde95c14ed042acc02248ed/codex-rs/core/src/session/turn.rs#L535-L565) | 综合模型后续需要与待处理输入；[停止阶段](https://github.com/openai/codex/blob/5b1d6560181680f95cde95c14ed042acc02248ed/codex-rs/core/src/session/turn.rs#L642-L671)还涉及 stop hook |
+| 谁把权限判断与环境接起来？ | [`tools/orchestrator.rs` · `ToolOrchestrator::run`](https://github.com/openai/codex/blob/5b1d6560181680f95cde95c14ed042acc02248ed/codex-rs/core/src/tools/orchestrator.rs#L125-L220) | 取得执行环境与权限，匹配跳过审批、禁止或需要审批等分支；用于 C06 的定点阅读 |
+
+这只能证明上述代码边界，不能证明各平台的隔离效果。S01 编写前还需跟踪实际执行器、平台 Sandbox 与测试，并运行对应平台实验。
+
+## 补充案例：Pi
+
+Pi 的源码边界适合定点对照，但不再作为课程主案例。Provider 中仍有大量协议适配逻辑，C01 不应要求读者先理解整个文件。
 
 | 学习问题 | 文件与符号 | 已核实内容 |
 | --- | --- | --- |
@@ -67,20 +81,6 @@
 - 对比实验应覆盖独立读取、读写同一文件、未知作用域与取消。源码已说明策略差异，但尚未运行实验，不能给出吞吐量或安全性排名；路径冲突调度也不等于安全沙箱。
 - 首批 C03、C04 仍先串行执行，完成基础后再引入这个对比，避免把并发带进第一个工具实验。
 
-## 工程专题案例：Codex
-
-此版本的核心循环在 `session/turn.rs`。以下入口适合已有最小循环认知后阅读。
-
-| 学习问题 | 文件与符号 | 已核实内容 |
-| --- | --- | --- |
-| API 请求有哪些显式字段？ | [`client.rs` · `build_responses_request`](https://github.com/openai/codex/blob/5b1d6560181680f95cde95c14ed042acc02248ed/codex-rs/core/src/client.rs#L881-L901) | 构造 Responses 请求，包含 `input`、`tools`、`tool_choice`、流式和并行调用等字段 |
-| 输出项目怎样成为工具调用？ | [`tools/router.rs` · `build_tool_call`](https://github.com/openai/codex/blob/5b1d6560181680f95cde95c14ed042acc02248ed/codex-rs/core/src/tools/router.rs#L242-L296) | 将不同 `ResponseItem` 转换为内部调用，保留调用 ID 与参数载荷；转换不等于执行 |
-| 工具执行怎样推动下一轮？ | [`stream_events_utils.rs` · 工具请求分支](https://github.com/openai/codex/blob/5b1d6560181680f95cde95c14ed042acc02248ed/codex-rs/core/src/stream_events_utils.rs#L332-L344) | 创建工具执行 future，同时设置 `needs_follow_up` |
-| 工具之外还有什么继续条件？ | [`session/turn.rs` · `run_turn`](https://github.com/openai/codex/blob/5b1d6560181680f95cde95c14ed042acc02248ed/codex-rs/core/src/session/turn.rs#L535-L565) | 综合模型后续需要与待处理输入；[停止阶段](https://github.com/openai/codex/blob/5b1d6560181680f95cde95c14ed042acc02248ed/codex-rs/core/src/session/turn.rs#L642-L671)还涉及 stop hook |
-| 谁把权限判断与环境接起来？ | [`tools/orchestrator.rs` · `ToolOrchestrator::run`](https://github.com/openai/codex/blob/5b1d6560181680f95cde95c14ed042acc02248ed/codex-rs/core/src/tools/orchestrator.rs#L125-L220) | 取得执行环境与权限，匹配跳过审批、禁止或需要审批等分支；用于 C06 的定点阅读 |
-
-这只能证明上述代码边界，不能证明各平台的隔离效果。S01 编写前还需跟踪实际执行器、平台 Sandbox 与测试，并运行对应平台实验。
-
 ## 后续候选：已定位，尚未完成机制解析
 
 | 项目 | 待研究问题 | 起点与当前边界 |
@@ -91,7 +91,7 @@
 | Hermes | 记忆如何写入、加载和控制作用域？ | [`tools/memory_tool.py`](https://github.com/NousResearch/hermes-agent/blob/7b6e0d3848cea58a1e784c80cccd446073e78828/tools/memory_tool.py#L172)及[`MemoryProvider`](https://github.com/NousResearch/hermes-agent/blob/7b6e0d3848cea58a1e784c80cccd446073e78828/agent/memory_provider.py#L75)。仅定位，不把存在入口当作完整机制证据 |
 | Hermes | Skill 如何发现、加载和维护？ | [`tools/skills_tool.py`](https://github.com/NousResearch/hermes-agent/blob/7b6e0d3848cea58a1e784c80cccd446073e78828/tools/skills_tool.py)。仅定位，留待 X02 专题 |
 
-MCP 全链路、Plan Mode 权限切换、持久任务恢复、完整 Memory 生命周期与 Evolution 评估尚未完成源码核实，不指定它们的最终主案例。
+MCP 全链路、Plan Mode 权限切换、持久任务恢复、完整 Memory 生命周期与 Evolution 评估尚未完成源码核实，优先从 Codex 跟踪实现，再决定是否需要其他项目补充；不能把尚未核实的能力预先归给 Codex。
 
 ## 后续研究与停止条件
 

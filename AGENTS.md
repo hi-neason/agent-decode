@@ -23,7 +23,8 @@
 
 - Structure topics around the problem, a minimal teaching implementation, verified source code cases, design comparisons, and unresolved questions.
 - Explain the problem and minimal mechanism before claiming a general solution; do not present one framework's design as an industry-wide rule.
-- Keep the curriculum independent of any single upstream project. Start with one primary case-study project for depth, then introduce other projects where their approaches differ meaningfully.
+- Use OpenAI Codex as the primary source-code learning project across the curriculum. Trace its actual implementation at a pinned commit; use Pi, Hermes, and other projects only for meaningful contrasts or capabilities outside the verified Codex scope.
+- Keep problem-driven explanations and simplified teaching examples distinct from Codex implementation details. Do not imply that Codex implements every API or architectural option covered by the curriculum.
 - Choose a clear primary case for each topic and add contrasting cases only when they improve understanding. Do not require every chapter to cover every project.
 - Compare solutions to the same technical problem, including their assumptions, behavior, constraints, and tradeoffs, rather than merely listing implementation differences.
 - Provide project-level guides covering architecture, entry points, module boundaries, and an end-to-end task flow. Link these guides to the relevant topic analyses so readers can explore both by concept and by project.
