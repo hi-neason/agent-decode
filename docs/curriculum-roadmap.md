@@ -1,6 +1,6 @@
 # 从一次模型调用到完整 Agent：课程路线草案
 
-状态：v0.3，2026-09-18。面向程序员，中文优先。[第一章](chapters/01-llm-apis-and-streaming.mdx)已包含三类 API 与流式处理，其余章节为设计草案，随案例研究调整。
+状态：v0.4，2026-09-21。面向程序员，中文优先。[第一章](chapters/01-llm-apis-and-streaming.mdx)已包含三类 API 与流式处理，[第二章](chapters/02-tool-call-requests.mdx)已实现工具请求识别；第三章及以后仍为设计草案，随案例研究调整。
 
 ## 读者与贯穿场景
 
